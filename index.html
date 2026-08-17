@@ -154,6 +154,8 @@
   }
   .pill:hover:not(.active) { background: #d1d1d1; }
   .pill.active { background: var(--c-text); color: white; }
+  .random-pill { background: #f4f4f4; }
+  .random-pill:disabled { opacity: 0.55; cursor: wait; }
 
   /* ---------- Masonry Grid ---------- */
   .masonry-wrapper { padding: 16px; }
@@ -368,6 +370,7 @@
     <button class="pill" data-filter="hero">Banner</button>
     <button class="pill" data-filter="logo">Logo</button>
     <button class="pill" data-filter="icon">Ikon</button>
+    <button class="pill random-pill" id="btn-random-home" title="Muat inspirasi acak">↻ Jelajah Acak</button>
   </div>
 
   <main class="masonry-wrapper">
@@ -483,10 +486,109 @@
       }
     },
 
-    showApp() {
+    async showApp() {
       document.getElementById('onboarding').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
-      this.renderGrid();
+
+      // Home is now an automatic discovery feed instead of an empty search page.
+      if (this.state.view === 'home' && !this.state.currentGame && this.state.artworks.length === 0) {
+        await this.loadRandomHome();
+      } else {
+        this.renderGrid();
+      }
+    },
+
+    randomFrom(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    },
+
+    sample(array, count) {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy.slice(0, count);
+    },
+
+    async loadRandomHome() {
+      const button = document.getElementById('btn-random-home');
+      if (button) {
+        button.disabled = true;
+        button.textContent = '↻ Memuat...';
+      }
+
+      this.state.currentGame = null;
+      this.state.view = 'home';
+      this.state.filter = 'all';
+      this.updateNavUI();
+      this.updateFilterUI();
+      this.showLoading(true);
+
+      try {
+        // SteamGridDB does not expose a documented "random games" v2 endpoint.
+        // We therefore use its autocomplete search with random short queries,
+        // then randomly choose games from the returned results.
+        const letters = 'abcdefghijklmnopqrstuvwxyz';
+        const queries = Array.from({ length: 5 }, () =>
+          letters[Math.floor(Math.random() * letters.length)] +
+          letters[Math.floor(Math.random() * letters.length)]
+        );
+
+        const searchResults = await Promise.allSettled(
+          queries.map(q => this.fetchAPI(`/search/autocomplete/${encodeURIComponent(q)}`))
+        );
+
+        const candidates = searchResults
+          .filter(r => r.status === 'fulfilled')
+          .flatMap(r => r.value?.data || [])
+          .filter(g => g && g.id && g.name);
+
+        const uniqueGames = [...new Map(candidates.map(g => [g.id, g])).values()];
+        const games = this.sample(uniqueGames, 4);
+
+        if (!games.length) {
+          throw new Error('Tidak menemukan game acak dari SteamGridDB.');
+        }
+
+        const artworkResults = await Promise.all(
+          games.map(async game => {
+            const typeResults = await Promise.allSettled(
+              Object.keys(TYPES).map(async type => {
+                const res = await this.fetchAPI(`/${TYPES[type].path}/game/${game.id}`);
+                return this.sample(res.data || [], 4).map(item => ({
+                  ...item,
+                  _type: type,
+                  _gameId: game.id,
+                  _gameName: game.name
+                }));
+              })
+            );
+            return typeResults
+              .filter(r => r.status === 'fulfilled')
+              .flatMap(r => r.value);
+          })
+        );
+
+        this.state.artworks = artworkResults.flat();
+        this.showLoading(false);
+        this.renderGrid();
+
+        if (!this.state.artworks.length) {
+          this.showToast('Game acak ditemukan, tetapi artwork belum tersedia. Coba Jelajah Acak lagi.');
+        }
+      } catch (error) {
+        console.error('Random home error:', error);
+        this.state.artworks = [];
+        this.showLoading(false);
+        this.renderGrid();
+        this.showToast(this.formatApiError(error));
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = '↻ Jelajah Acak';
+        }
+      }
     },
 
     showToast(msg) {
@@ -709,15 +811,17 @@
       const typeLabel = TYPES[item._type]?.label || item._type;
       const dims = item.width && item.height ? `${item.width}x${item.height}` : '';
       
+      const gameName = item._gameName || this.state.currentGame?.name || '';
       return `
         <div class="card" onclick="App.openLightbox('${id}')">
-          <img src="${item.thumb || item.url}" alt="" loading="lazy">
+          <img src="${item.thumb || item.url}" alt="${gameName.replace(/"/g, '&quot;')}" loading="lazy">
           <div class="overlay">
             <button class="btn-save" data-item-id="${id}" style="background: ${btnBg};" 
                     onclick="event.stopPropagation(); App.toggleSave('${id}')">
               ${btnText}
             </button>
             <div class="card-info">
+              ${gameName ? `<span>${gameName}</span>` : ''}
               ${dims ? `<span>${dims}</span>` : ''}
               <span>${typeLabel}</span>
             </div>
@@ -742,7 +846,7 @@
         if (this.state.view === 'saved') {
           empty.innerHTML = `<h2>Belum ada inspirasi</h2><p>Mulai cari game dan klik 'Simpan' pada gambar yang Anda suka.</p>`;
         } else if (!this.state.currentGame) {
-          empty.innerHTML = `<h2>Mulai pencarian</h2><p>Gunakan bilah pencarian di atas untuk mencari aset game.</p>`;
+          empty.innerHTML = `<h2>Menjelajah dunia game</h2><p>Belum ada artwork untuk ditampilkan. Tekan <b>Jelajah Acak</b> untuk mencoba lagi.</p>`;
         } else {
           empty.innerHTML = `<h2>Kosong</h2><p>Tidak ada visual yang cocok dengan filter ini untuk game yang dipilih.</p>`;
         }
@@ -841,10 +945,14 @@
     bindEvents() {
       // Nav Tabs
       document.querySelectorAll('[data-tab]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
           this.state.view = e.currentTarget.dataset.tab;
           this.updateNavUI();
-          this.renderGrid();
+          if (this.state.view === 'home') {
+            await this.loadRandomHome();
+          } else {
+            this.renderGrid();
+          }
           window.scrollTo({ top: 0, behavior: 'smooth' });
         });
       });
@@ -860,6 +968,9 @@
       
       // Search
       document.getElementById('search-input').addEventListener('input', (e) => this.handleSearchInput(e));
+
+      // Random discovery home
+      document.getElementById('btn-random-home').addEventListener('click', () => this.loadRandomHome());
       
       // Settings Modal
       const openSettings = () => {
