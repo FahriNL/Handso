@@ -295,6 +295,27 @@
     animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
   @keyframes slideUp { from { bottom: -50px; opacity: 0; } to { bottom: 24px; opacity: 1; } }
+
+  /* ---------- Infinite Home / Pull to Refresh ---------- */
+  .feed-loader {
+    min-height: 72px; display: flex; align-items: center; justify-content: center;
+    color: var(--c-text-light); font-size: 14px; font-weight: 600;
+  }
+  .feed-loader .mini-spinner {
+    width: 24px; height: 24px; border: 3px solid var(--c-gray-light);
+    border-top-color: var(--c-text); border-radius: 50%; animation: spin .7s linear infinite;
+    margin-right: 10px;
+  }
+  .pull-indicator {
+    position: fixed; top: var(--header-height); left: 50%; transform: translate(-50%, -70px);
+    z-index: 95; background: #111; color: #fff; border-radius: 999px;
+    padding: 9px 16px; font-size: 13px; font-weight: 700; opacity: 0;
+    transition: transform .18s ease, opacity .18s ease; pointer-events: none;
+  }
+  .pull-indicator.visible { opacity: 1; }
+  @media (max-width: 768px) {
+    .pull-indicator { top: var(--header-mobile-height); }
+  }
 </style>
 </head>
 <body>
@@ -380,7 +401,11 @@
     
     <div id="empty-state" class="empty-state hidden"></div>
     <div class="masonry" id="grid"></div>
+    <div id="feed-loader" class="feed-loader hidden" aria-live="polite">
+      <span class="mini-spinner"></span><span>Memuat lebih banyak...</span>
+    </div>
   </main>
+  <div id="pull-indicator" class="pull-indicator">↓ Tarik untuk menyegarkan</div>
 </div>
 
 <!-- Lightbox Modal -->
@@ -459,7 +484,10 @@
       currentGame: null,
       artworks: [],
       saved: [],
-      filter: 'all'
+      filter: 'all',
+      homeLoading: false,
+      homeHasMore: true,
+      homeGeneration: 0
     },
     itemMap: new Map(),
     searchTimeout: null,
@@ -490,9 +518,8 @@
       document.getElementById('onboarding').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
 
-      // Home is now an automatic discovery feed instead of an empty search page.
-      if (this.state.view === 'home' && !this.state.currentGame && this.state.artworks.length === 0) {
-        await this.loadRandomHome();
+      if (this.state.view === 'home' && this.state.artworks.length === 0) {
+        await this.refreshHome();
       } else {
         this.renderGrid();
       }
@@ -511,84 +538,114 @@
       return copy.slice(0, count);
     },
 
-    async loadRandomHome() {
-      const button = document.getElementById('btn-random-home');
-      if (button) {
-        button.disabled = true;
-        button.textContent = '↻ Memuat...';
-      }
+    randomQueries(count = 6) {
+      const letters = 'abcdefghijklmnopqrstuvwxyz';
+      return Array.from({ length: count }, () =>
+        letters[Math.floor(Math.random() * letters.length)] +
+        letters[Math.floor(Math.random() * letters.length)]
+      );
+    },
 
+    async discoverRandomGames(count = 7) {
+      const queries = this.randomQueries(5);
+      const results = await Promise.allSettled(
+        queries.map(q => this.fetchAPI(`/search/autocomplete/${encodeURIComponent(q)}`))
+      );
+      const candidates = results
+        .filter(r => r.status === 'fulfilled')
+        .flatMap(r => r.value?.data || [])
+        .filter(g => g && g.id && g.name);
+      return this.sample([...new Map(candidates.map(g => [g.id, g])).values()], count);
+    },
+
+    async fetchRandomBatch(gameCount = 6) {
+      const games = await this.discoverRandomGames(gameCount);
+      if (!games.length) throw new Error('Tidak menemukan game acak dari SteamGridDB.');
+
+      const artworkResults = await Promise.all(
+        games.map(async game => {
+          const typeResults = await Promise.allSettled(
+            Object.keys(TYPES).map(async type => {
+              const res = await this.fetchAPI(`/${TYPES[type].path}/game/${game.id}`);
+              // Take a generous random sample from each game's artwork.
+              return this.sample(res.data || [], 8).map(item => ({
+                ...item,
+                _type: type,
+                _gameId: game.id,
+                _gameName: game.name
+              }));
+            })
+          );
+          return typeResults
+            .filter(r => r.status === 'fulfilled')
+            .flatMap(r => r.value);
+        })
+      );
+
+      // De-duplicate artwork across batches so infinite scrolling doesn't
+      // constantly show the same images.
+      const batch = artworkResults.flat();
+      const existing = new Set(this.state.artworks.map(item => this.getItemId(item)));
+      return this.sample(
+        batch.filter(item => !existing.has(this.getItemId(item))),
+        batch.length
+      );
+    },
+
+    async refreshHome() {
+      if (this.state.homeLoading) return;
+      this.state.homeGeneration++;
+      this.state.homeHasMore = true;
+      this.state.artworks = [];
       this.state.currentGame = null;
       this.state.view = 'home';
       this.state.filter = 'all';
       this.updateNavUI();
       this.updateFilterUI();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       this.showLoading(true);
 
+      const generation = this.state.homeGeneration;
       try {
-        // SteamGridDB does not expose a documented "random games" v2 endpoint.
-        // We therefore use its autocomplete search with random short queries,
-        // then randomly choose games from the returned results.
-        const letters = 'abcdefghijklmnopqrstuvwxyz';
-        const queries = Array.from({ length: 5 }, () =>
-          letters[Math.floor(Math.random() * letters.length)] +
-          letters[Math.floor(Math.random() * letters.length)]
-        );
-
-        const searchResults = await Promise.allSettled(
-          queries.map(q => this.fetchAPI(`/search/autocomplete/${encodeURIComponent(q)}`))
-        );
-
-        const candidates = searchResults
-          .filter(r => r.status === 'fulfilled')
-          .flatMap(r => r.value?.data || [])
-          .filter(g => g && g.id && g.name);
-
-        const uniqueGames = [...new Map(candidates.map(g => [g.id, g])).values()];
-        const games = this.sample(uniqueGames, 4);
-
-        if (!games.length) {
-          throw new Error('Tidak menemukan game acak dari SteamGridDB.');
-        }
-
-        const artworkResults = await Promise.all(
-          games.map(async game => {
-            const typeResults = await Promise.allSettled(
-              Object.keys(TYPES).map(async type => {
-                const res = await this.fetchAPI(`/${TYPES[type].path}/game/${game.id}`);
-                return this.sample(res.data || [], 4).map(item => ({
-                  ...item,
-                  _type: type,
-                  _gameId: game.id,
-                  _gameName: game.name
-                }));
-              })
-            );
-            return typeResults
-              .filter(r => r.status === 'fulfilled')
-              .flatMap(r => r.value);
-          })
-        );
-
-        this.state.artworks = artworkResults.flat();
-        this.showLoading(false);
-        this.renderGrid();
-
-        if (!this.state.artworks.length) {
-          this.showToast('Game acak ditemukan, tetapi artwork belum tersedia. Coba Jelajah Acak lagi.');
-        }
+        await this.loadMoreHome(true, generation);
       } catch (error) {
-        console.error('Random home error:', error);
-        this.state.artworks = [];
+        console.error('Home refresh error:', error);
         this.showLoading(false);
         this.renderGrid();
         this.showToast(this.formatApiError(error));
-      } finally {
-        if (button) {
-          button.disabled = false;
-          button.textContent = '↻ Jelajah Acak';
-        }
       }
+    },
+
+    async loadMoreHome(initial = false, generation = this.state.homeGeneration) {
+      if (this.state.homeLoading || !this.state.homeHasMore || this.state.view !== 'home' || this.state.currentGame) return;
+      this.state.homeLoading = true;
+      const loader = document.getElementById('feed-loader');
+      if (!initial && loader) loader.classList.remove('hidden');
+
+      try {
+        const batch = await this.fetchRandomBatch(initial ? 5 : 5);
+        if (generation !== this.state.homeGeneration || this.state.view !== 'home') return;
+
+        if (batch.length) {
+          this.state.artworks.push(...this.sample(batch, batch.length));
+          this.renderGrid();
+        } else {
+          this.state.homeHasMore = false;
+        }
+      } catch (error) {
+        console.error('Infinite home error:', error);
+        if (initial) throw error;
+        this.showToast(this.formatApiError(error));
+      } finally {
+        this.state.homeLoading = false;
+        this.showLoading(false);
+        if (loader) loader.classList.add('hidden');
+      }
+    },
+
+    async loadRandomHome() {
+      // Button now behaves like a full refresh.
+      await this.refreshHome();
     },
 
     showToast(msg) {
@@ -766,6 +823,7 @@
       document.getElementById('search-input').value = name;
 
       this.state.currentGame = { id, name };
+      this.state.homeHasMore = false;
       this.state.view = 'home';
       this.state.filter = 'all';
       this.updateNavUI();
@@ -941,8 +999,61 @@
       });
     },
 
+    /* ---------- Infinite Scroll / Pull to Refresh ---------- */
+    setupFeedObserver() {
+      const loader = document.getElementById('feed-loader');
+      if (!loader || !('IntersectionObserver' in window)) return;
+      this.feedObserver = new IntersectionObserver(entries => {
+        if (entries.some(entry => entry.isIntersecting) && this.state.view === 'home' && !this.state.currentGame) {
+          this.loadMoreHome(false);
+        }
+      }, { rootMargin: '900px 0px' });
+      this.feedObserver.observe(loader);
+    },
+
+    setupPullToRefresh() {
+      let startY = 0;
+      let pulling = false;
+      let distance = 0;
+      const indicator = document.getElementById('pull-indicator');
+      const threshold = 85;
+
+      window.addEventListener('touchstart', e => {
+        if (this.state.view !== 'home' || this.state.currentGame || window.scrollY > 5 || this.state.homeLoading) return;
+        startY = e.touches[0].clientY;
+        pulling = true;
+        distance = 0;
+      }, { passive: true });
+
+      window.addEventListener('touchmove', e => {
+        if (!pulling || this.state.view !== 'home') return;
+        distance = Math.max(0, e.touches[0].clientY - startY);
+        if (distance <= 0) return;
+        const progress = Math.min(distance / threshold, 1);
+        indicator.classList.add('visible');
+        indicator.textContent = progress >= 1 ? '↑ Lepaskan untuk menyegarkan' : '↓ Tarik untuk menyegarkan';
+        indicator.style.transform = `translate(-50%, ${Math.min(distance * .55, 54) - 70}px)`;
+      }, { passive: true });
+
+      window.addEventListener('touchend', async () => {
+        if (!pulling) return;
+        pulling = false;
+        if (distance >= threshold && this.state.view === 'home' && !this.state.homeLoading) {
+          indicator.textContent = '↻ Menyegarkan...';
+          indicator.style.transform = 'translate(-50%, 8px)';
+          await this.refreshHome();
+        }
+        distance = 0;
+        indicator.classList.remove('visible');
+        indicator.style.transform = '';
+      }, { passive: true });
+    },
+
     /* ---------- Settings & Events ---------- */
     bindEvents() {
+      this.setupFeedObserver();
+      this.setupPullToRefresh();
+
       // Nav Tabs
       document.querySelectorAll('[data-tab]').forEach(btn => {
         btn.addEventListener('click', async (e) => {
