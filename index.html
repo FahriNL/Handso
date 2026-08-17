@@ -3,705 +3,963 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GRIDWALL — Arsip Visual Game</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Gridwall — Inspirasi Visual Game</title>
 <style>
-  :root{
-    --bg:#0b0b0d;
-    --panel:#151318;
-    --panel-2:#1c1a20;
-    --line:#2c2822;
-    --amber:#d4a24c;
-    --amber-bright:#f2c572;
-    --amber-dim:#7d6432;
-    --text:#ece7dc;
-    --text-dim:#8f897d;
-    --danger:#c1553f;
-    --radius:3px;
-  }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{height:100%;}
-  body{
-    margin:0; background:var(--bg); color:var(--text);
-    font-family:'JetBrains Mono', monospace;
-    overscroll-behavior-y:none;
-    -webkit-font-smoothing:antialiased;
-    padding-bottom:env(safe-area-inset-bottom);
-  }
-  ::selection{ background:var(--amber-dim); color:#fff; }
-  button{ font-family:inherit; }
-  a{ color:var(--amber-bright); }
-  input{ font-family:inherit; }
-  ::-webkit-scrollbar{ width:0; height:0; }
-
-  .hidden{ display:none !important; }
-
-  /* ---------- shell ---------- */
-  #app{ min-height:100%; display:flex; flex-direction:column; }
-
-  .scanlines{ position:relative; }
-  .scanlines::before{
-    content:""; position:absolute; inset:0; pointer-events:none;
-    background:repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0px, rgba(255,255,255,.025) 1px, transparent 1px, transparent 3px);
-    mix-blend-mode:overlay;
+  :root {
+    --c-red: #E60023;
+    --c-red-hover: #AD081B;
+    --c-bg: #FFFFFF;
+    --c-bg-hover: #E9E9E9;
+    --c-text: #111111;
+    --c-text-light: #767676;
+    --c-gray-light: #E9E9E9;
+    --c-overlay: rgba(0,0,0,0.4);
+    
+    --radius-card: 16px;
+    --radius-pill: 24px;
+    --header-height: 80px;
+    --header-mobile-height: 70px;
   }
 
-  .topbar{
-    position:sticky; top:0; z-index:20;
-    background:var(--panel); border-bottom:1px solid var(--line);
-    padding:14px 14px 10px;
-  }
-  .topbar-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-  .brand h1{
-    margin:0; font-family:'Syne', sans-serif; font-weight:800;
-    font-size:22px; letter-spacing:.01em; color:var(--text);
-    display:flex; align-items:baseline; gap:2px;
-  }
-  .brand h1 .cursor{
-    color:var(--amber); animation:blink 1.1s step-end infinite;
-  }
-  @media (prefers-reduced-motion: reduce){ .brand h1 .cursor{ animation:none; } }
-  @keyframes blink{ 50%{ opacity:0; } }
-  .brand p{ margin:2px 0 0; font-size:10px; letter-spacing:.12em; color:var(--text-dim); text-transform:uppercase; }
-
-  .icon-btn{
-    background:transparent; border:1px solid var(--line); color:var(--amber-bright);
-    width:38px; height:38px; border-radius:var(--radius);
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer; flex:0 0 auto;
-  }
-  .icon-btn:active{ background:var(--panel-2); }
-  .icon-btn:focus-visible, button:focus-visible, input:focus-visible{ outline:2px solid var(--amber); outline-offset:1px; }
-
-  .searchwrap{ margin-top:12px; position:relative; }
-  .searchwrap svg{ position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-dim); }
-  #searchInput{
-    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--text);
-    padding:11px 34px 11px 34px; border-radius:var(--radius); font-size:14px;
-  }
-  #searchInput::placeholder{ color:var(--text-dim); }
-  #clearSearch{
-    position:absolute; right:6px; top:50%; transform:translateY(-50%);
-    background:none; border:none; color:var(--text-dim); font-size:16px; cursor:pointer; padding:6px;
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  
+  body {
+    margin: 0;
+    background: var(--c-bg);
+    color: var(--c-text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding-top: var(--header-height);
   }
 
-  .suggestions{
-    display:flex; gap:8px; overflow-x:auto; margin-top:10px; padding-bottom:2px;
-  }
-  .suggestion-chip{
-    flex:0 0 auto; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
-    padding:8px 12px; border-radius:var(--radius); font-size:12px; cursor:pointer; white-space:nowrap;
-  }
-  .suggestion-chip small{ color:var(--text-dim); margin-left:6px; }
-  .suggestion-chip:active{ border-color:var(--amber-dim); }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #999; }
 
-  .filterbar{ display:flex; gap:6px; margin-top:12px; }
-  .filter-btn{
-    flex:1; background:transparent; border:1px solid var(--line); color:var(--text-dim);
-    padding:8px 4px; font-size:10px; letter-spacing:.08em; border-radius:var(--radius); cursor:pointer;
-  }
-  .filter-btn.active{ color:#12100e; background:var(--amber); border-color:var(--amber); font-weight:600; }
+  .hidden { display: none !important; }
 
-  .status-line{
-    padding:10px 14px; font-size:11px; color:var(--text-dim); letter-spacing:.02em;
-    display:flex; align-items:center; justify-content:space-between; gap:8px;
+  /* ---------- Header (Desktop) ---------- */
+  .top-nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: var(--header-height);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center;
+    padding: 0 16px; gap: 16px;
+    z-index: 100;
   }
-  .status-line .retry{
-    background:none; border:1px solid var(--amber-dim); color:var(--amber-bright);
-    padding:4px 8px; border-radius:var(--radius); font-size:10px; cursor:pointer;
-  }
-
-  .empty-state{
-    margin:30px auto; max-width:280px; text-align:center; color:var(--text-dim); font-size:12px; line-height:1.6;
-  }
-  .empty-state strong{ display:block; color:var(--amber-bright); font-family:'Syne',sans-serif; font-size:15px; margin-bottom:6px; }
-
-  /* ---------- masonry ---------- */
-  #masonry{
-    column-count:2; column-gap:8px; padding:0 8px 90px; flex:1;
-  }
-  @media (min-width:480px){ #masonry{ column-count:3; } }
-  @media (min-width:760px){ #masonry{ column-count:4; } }
-  .card{
-    break-inside:avoid; margin-bottom:8px; position:relative;
-    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
-    overflow:hidden; cursor:pointer;
-  }
-  .card img{ width:100%; display:block; background:var(--panel-2); }
-  .card .tag{
-    position:absolute; top:0; left:0; background:rgba(11,11,13,.88);
-    color:var(--amber-bright); font-size:9px; letter-spacing:.06em; font-weight:600;
-    padding:4px 6px; border-right:1px solid var(--amber-dim); border-bottom:1px solid var(--amber-dim);
-    border-bottom-right-radius:var(--radius);
-  }
-  .card .tag .dim{ color:var(--text-dim); font-weight:400; margin-left:5px; }
-  .card .pinned-badge{
-    position:absolute; top:5px; right:5px; width:8px; height:8px; border-radius:50%;
-    background:var(--amber); box-shadow:0 0 0 2px rgba(11,11,13,.7);
+  .logo-wrapper { flex: 0 0 auto; }
+  .logo-circle {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--c-red); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 24px; cursor: pointer;
   }
 
-  /* ---------- bottom tabs ---------- */
-  .tabbar{
-    position:sticky; bottom:0; z-index:20; display:flex;
-    background:var(--panel); border-top:1px solid var(--line);
-    padding:6px 10px calc(6px + env(safe-area-inset-bottom));
+  .desktop-nav { display: flex; gap: 8px; flex: 0 0 auto; }
+  .nav-btn {
+    padding: 12px 16px; border-radius: var(--radius-pill);
+    font-weight: 600; font-size: 16px; border: none;
+    background: transparent; color: var(--c-text); cursor: pointer;
+    transition: background 0.2s;
   }
-  .tab-btn{
-    flex:1; background:none; border:none; color:var(--text-dim);
-    display:flex; flex-direction:column; align-items:center; gap:3px;
-    padding:6px 0; font-size:10px; letter-spacing:.08em; cursor:pointer;
-  }
-  .tab-btn.active{ color:var(--amber-bright); }
-  .tab-btn svg{ width:20px; height:20px; }
+  .nav-btn:hover:not(.active) { background: var(--c-bg-hover); }
+  .nav-btn.active { background: var(--c-text); color: white; }
 
-  /* ---------- onboarding ---------- */
-  #onboarding{
-    min-height:100%; display:flex; flex-direction:column; justify-content:center;
-    padding:28px 22px; max-width:420px; margin:0 auto;
+  .search-container { flex: 1; max-width: 800px; position: relative; }
+  .search-box {
+    display: flex; align-items: center;
+    background: var(--c-gray-light); border-radius: var(--radius-pill);
+    padding: 0 16px; height: 48px; width: 100%;
+    transition: background 0.2s;
   }
-  #onboarding h1{ font-family:'Syne',sans-serif; font-size:26px; margin:0 0 4px; }
-  #onboarding h1 span{ color:var(--amber); }
-  #onboarding .lede{ color:var(--text-dim); font-size:13px; line-height:1.6; margin-bottom:22px; }
-  .field-label{ font-size:10px; letter-spacing:.1em; color:var(--amber-bright); text-transform:uppercase; margin-bottom:6px; display:block; }
-  .field-input{
-    width:100%; background:var(--panel); border:1px solid var(--line); color:var(--text);
-    padding:12px; border-radius:var(--radius); font-size:13px; margin-bottom:6px;
+  .search-box:hover, .search-box:focus-within { background: #e1e1e1; }
+  .search-icon { color: var(--c-text-light); margin-right: 8px; display: flex; }
+  .search-box input {
+    background: transparent; border: none; font-size: 16px;
+    width: 100%; outline: none; color: var(--c-text);
   }
-  .field-hint{ font-size:11px; color:var(--text-dim); line-height:1.5; margin-bottom:18px; }
-  .btn-primary{
-    width:100%; background:var(--amber); color:#151318; border:none; font-weight:700;
-    padding:13px; border-radius:var(--radius); font-size:13px; letter-spacing:.03em; cursor:pointer;
+  
+  .search-dropdown {
+    position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+    background: white; border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    padding: 8px; z-index: 200;
+    max-height: 400px; overflow-y: auto;
   }
-  .btn-primary:disabled{ opacity:.4; }
-  .btn-ghost{
-    width:100%; background:none; color:var(--text-dim); border:1px solid var(--line);
-    padding:11px; border-radius:var(--radius); font-size:12px; margin-top:8px; cursor:pointer;
+  .suggestion-item {
+    padding: 12px 16px; border-radius: 8px; cursor: pointer;
+    font-size: 16px; font-weight: 600;
   }
-  details.advanced{ margin-bottom:18px; }
-  details.advanced summary{ font-size:11px; color:var(--text-dim); cursor:pointer; letter-spacing:.05em; }
-  details.advanced .field-hint{ margin-top:10px; }
+  .suggestion-item:hover { background: var(--c-gray-light); }
+  .text-muted { color: var(--c-text-light); font-weight: normal; }
 
-  /* ---------- settings sheet & lightbox (shared overlay) ---------- */
-  .overlay{
-    position:fixed; inset:0; background:rgba(6,5,4,.72); z-index:50;
-    display:flex; align-items:flex-end;
+  .icon-btn {
+    width: 48px; height: 48px; border-radius: 50%;
+    border: none; background: transparent; color: var(--c-text-light);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.2s;
   }
-  .sheet{
-    width:100%; max-height:88vh; overflow-y:auto; background:var(--panel);
-    border-top:1px solid var(--amber-dim); border-radius:10px 10px 0 0;
-    padding:18px 18px calc(18px + env(safe-area-inset-bottom));
-  }
-  .sheet-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
-  .sheet-head h2{ font-family:'Syne',sans-serif; font-size:16px; margin:0; }
+  .icon-btn:hover { background: var(--c-bg-hover); }
 
-  /* lightbox specifics */
-  #lightbox{ align-items:center; padding:14px; }
-  .lb-inner{ width:100%; max-width:520px; max-height:92vh; overflow-y:auto; background:var(--panel); border:1px solid var(--amber-dim); border-radius:8px; }
-  .lb-imgwrap{ background:#000; display:flex; align-items:center; justify-content:center; }
-  .lb-imgwrap img{ width:100%; max-height:60vh; object-fit:contain; display:block; }
-  .lb-meta{ padding:14px 16px; }
-  .lb-meta .row{ display:flex; justify-content:space-between; font-size:11px; padding:5px 0; border-bottom:1px dashed var(--line); color:var(--text-dim); }
-  .lb-meta .row span:last-child{ color:var(--text); }
-  .lb-actions{ display:flex; gap:8px; padding:14px 16px 4px; }
-  .lb-actions .btn-primary, .lb-actions .btn-ghost{ margin-top:0; }
-  .lb-hint{ padding:0 16px 16px; font-size:10.5px; color:var(--text-dim); line-height:1.5; }
-  .lb-close{ position:sticky; top:8px; margin-left:auto; margin-right:8px; }
+  /* ---------- Mobile Header / Bottom Nav ---------- */
+  .bottom-nav { display: none; }
 
-  .toast{
-    position:fixed; left:50%; bottom:80px; transform:translateX(-50%);
-    background:var(--panel-2); border:1px solid var(--danger); color:var(--text);
-    font-size:12px; padding:10px 14px; border-radius:var(--radius); z-index:60; max-width:88%;
+  @media (max-width: 768px) {
+    body { padding-top: var(--header-mobile-height); padding-bottom: calc(var(--header-mobile-height) + env(safe-area-inset-bottom)); }
+    .hide-mobile { display: none !important; }
+    .top-nav {
+      height: var(--header-mobile-height);
+      padding: 0 12px; gap: 12px;
+    }
+    .search-container { max-width: 100%; }
+    
+    .bottom-nav {
+      display: flex; position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px);
+      border-top: 1px solid var(--c-gray-light);
+      justify-content: space-around;
+      padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+      z-index: 100;
+    }
+    .mobile-nav-btn {
+      background: none; border: none; padding: 12px;
+      color: var(--c-text-light); cursor: pointer;
+      border-radius: 12px;
+    }
+    .mobile-nav-btn.active { color: var(--c-text); }
   }
+  @media (min-width: 769px) { .hide-desktop { display: none !important; } }
+
+  /* ---------- Filter Bar ---------- */
+  .categories-container {
+    position: sticky; top: var(--header-height);
+    background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px);
+    z-index: 90; padding: 12px 16px;
+    display: flex; justify-content: center; gap: 12px;
+    overflow-x: auto; white-space: nowrap;
+    border-bottom: 1px solid transparent;
+  }
+  .categories-container.scrolled { border-bottom-color: var(--c-gray-light); }
+  @media (max-width: 768px) { .categories-container { top: var(--header-mobile-height); padding: 12px; justify-content: flex-start; } }
+  
+  .pill {
+    padding: 10px 16px; border-radius: var(--radius-pill);
+    font-weight: 600; font-size: 14px; border: none;
+    background: var(--c-gray-light); color: var(--c-text);
+    cursor: pointer; transition: background 0.2s;
+  }
+  .pill:hover:not(.active) { background: #d1d1d1; }
+  .pill.active { background: var(--c-text); color: white; }
+
+  /* ---------- Masonry Grid ---------- */
+  .masonry-wrapper { padding: 16px; }
+  .masonry {
+    column-count: 2; column-gap: 12px;
+  }
+  @media (min-width: 768px) { .masonry { column-count: 3; column-gap: 16px; } .masonry-wrapper { padding: 24px; } }
+  @media (min-width: 1024px) { .masonry { column-count: 4; } }
+  @media (min-width: 1280px) { .masonry { column-count: 5; } }
+  @media (min-width: 1600px) { .masonry { column-count: 7; } }
+
+  .card {
+    -webkit-column-break-inside: avoid; break-inside: avoid;
+    margin-bottom: 12px; position: relative;
+    border-radius: var(--radius-card); overflow: hidden;
+    background: var(--c-gray-light); cursor: zoom-in;
+  }
+  @media (min-width: 768px) { .card { margin-bottom: 16px; } }
+  .card img { width: 100%; display: block; }
+  
+  .card .overlay {
+    position: absolute; inset: 0;
+    background: var(--c-overlay); opacity: 0;
+    transition: opacity 0.2s;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 16px; pointer-events: none;
+  }
+  @media (hover: hover) { .card:hover .overlay { opacity: 1; } }
+  
+  .card .overlay > * { pointer-events: auto; }
+  .btn-save {
+    align-self: flex-end;
+    background: var(--c-red); color: white; border: none;
+    padding: 12px 18px; border-radius: var(--radius-pill);
+    font-weight: 700; font-size: 15px; cursor: pointer;
+    transition: filter 0.2s;
+  }
+  .btn-save:hover { filter: brightness(0.9); }
+  
+  .card-info { display: flex; gap: 8px; align-items: flex-end; }
+  .card-info span {
+    background: rgba(255, 255, 255, 0.95); color: #111;
+    padding: 6px 12px; border-radius: var(--radius-pill);
+    font-size: 12px; font-weight: 700;
+  }
+
+  /* ---------- Modals ---------- */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
+    z-index: 1000; display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-box {
+    background: white; border-radius: 24px;
+    width: 100%; max-width: 480px; padding: 32px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    position: relative;
+  }
+  .modal-box.large {
+    max-width: 1000px; padding: 0; overflow: hidden;
+    display: flex; flex-direction: column; max-height: 90vh;
+  }
+  
+  /* Lightbox */
+  .btn-close-lightbox {
+    position: absolute; top: 20px; left: 20px;
+    background: white; border: none; border-radius: 50%;
+    width: 48px; height: 48px; font-size: 20px; font-weight: bold;
+    cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 10; display: flex; align-items: center; justify-content: center;
+  }
+  .btn-close-lightbox:hover { background: var(--c-bg-hover); }
+  
+  .lightbox-grid { display: flex; height: 100%; overflow-y: auto; }
+  .lightbox-img-wrapper {
+    flex: 1; background: #f0f0f0;
+    display: flex; align-items: center; justify-content: center; padding: 32px;
+  }
+  .lightbox-img-wrapper img {
+    max-width: 100%; max-height: 75vh;
+    border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  }
+  .lightbox-details {
+    width: 360px; padding: 40px 32px;
+    display: flex; flex-direction: column; gap: 16px;
+    background: white;
+  }
+  @media (max-width: 768px) {
+    .lightbox-grid { flex-direction: column; }
+    .lightbox-details { width: 100%; padding: 24px; }
+    .lightbox-img-wrapper { padding: 16px; padding-top: 80px; }
+  }
+
+  .lb-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .lb-header h2 { margin: 0; font-size: 22px; font-weight: 700; }
+  .lb-meta { margin: 0; font-size: 15px; color: var(--c-text); display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--c-gray-light); }
+  .lb-meta strong { font-weight: 600; color: var(--c-text-light); }
+  
+  /* Buttons */
+  .btn-primary {
+    background: var(--c-red); color: white; border: none;
+    padding: 14px 24px; border-radius: var(--radius-pill);
+    font-weight: 700; font-size: 16px; cursor: pointer;
+  }
+  .btn-primary:hover { background: var(--c-red-hover); }
+  .btn-secondary {
+    background: var(--c-gray-light); color: var(--c-text); border: none;
+    padding: 14px 24px; border-radius: var(--radius-pill);
+    font-weight: 700; font-size: 16px; cursor: pointer; text-decoration: none; text-align: center;
+  }
+  .btn-secondary:hover { background: #d1d1d1; }
+
+  /* Form */
+  .form-group { margin-bottom: 24px; text-align: left; }
+  .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; padding-left: 4px; }
+  .form-group input { 
+    width: 100%; padding: 14px 16px; border-radius: 16px; 
+    border: 2px solid var(--c-gray-light); font-size: 16px; box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus { border-color: var(--c-text-light); outline: none; }
+  .form-group small { display: block; font-size: 13px; color: var(--c-text-light); margin-top: 8px; padding-left: 4px; }
+  
+  /* Utilities */
+  .empty-state { text-align: center; padding: 80px 20px; }
+  .empty-state h2 { font-size: 24px; margin-bottom: 12px; }
+  .empty-state p { color: var(--c-text-light); font-size: 16px; max-width: 400px; margin: 0 auto; line-height: 1.5; }
+  
+  .spinner { animation: spin 1s linear infinite; margin: 60px auto; display: block; }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #111; color: white; padding: 14px 24px;
+    border-radius: 32px; font-weight: 600; font-size: 15px;
+    z-index: 2000; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes slideUp { from { bottom: -50px; opacity: 0; } to { bottom: 24px; opacity: 1; } }
 </style>
 </head>
 <body>
 
-<div id="onboarding" class="hidden scanlines">
-  <h1>GRIDWALL<span>.</span></h1>
-  <p class="lede">Papan visual buat art game — grid, hero, logo, sama ikon — ditarik langsung dari SteamGridDB. Masukin API key kamu buat mulai.</p>
-
-  <label class="field-label" for="obApiKey">SteamGridDB API Key</label>
-  <input id="obApiKey" class="field-input" type="text" placeholder="tempel API key di sini" autocomplete="off" autocapitalize="off" spellcheck="false">
-  <p class="field-hint">Belum punya? Bikin gratis di <a href="https://www.steamgriddb.com/profile/preferences" target="_blank" rel="noopener">steamgriddb.com/profile/preferences</a> — key ini cuma disimpan di perangkat kamu, nggak dikirim ke mana-mana selain SteamGridDB.</p>
-
-  <details class="advanced">
-    <summary>Pengaturan lanjutan (relay CORS)</summary>
-    <p class="field-hint">Browser kadang diblokir CORS saat manggil API SteamGridDB langsung. Kalau nanti muncul error koneksi, isi prefix relay proxy di sini (kosongkan kalau nggak perlu). Permintaan bakal lewat proxy ini, jadi cuma pakai proxy yang kamu percaya.</p>
-    <label class="field-label" for="obProxy">Prefix Proxy (opsional)</label>
-    <input id="obProxy" class="field-input" type="text" placeholder="https://corsproxy.io/?url=" autocomplete="off" spellcheck="false">
-  </details>
-
-  <button class="btn-primary" id="obSaveBtn">Simpan &amp; Mulai</button>
-</div>
-
-<div id="app" class="hidden">
-  <header class="topbar scanlines">
-    <div class="topbar-row">
-      <div class="brand">
-        <h1>GRIDWALL<span class="cursor">▮</span></h1>
-        <p>Arsip Visual — SteamGridDB</p>
-      </div>
-      <button class="icon-btn" id="settingsBtn" aria-label="Pengaturan">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </button>
+<!-- Onboarding Modal -->
+<div id="onboarding" class="modal-overlay hidden" style="background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);">
+  <div class="modal-box" style="box-shadow: 0 20px 60px rgba(0,0,0,0.1);">
+    <div style="display:flex; justify-content:center; margin-bottom: 24px;">
+      <div class="logo-circle" style="width: 72px; height: 72px; font-size: 36px;">G</div>
     </div>
-
-    <div id="searchSection">
-      <div class="searchwrap">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input id="searchInput" type="text" placeholder="cari judul game..." autocomplete="off" autocapitalize="off" spellcheck="false">
-        <button id="clearSearch" class="hidden" aria-label="Hapus">×</button>
-      </div>
-      <div id="suggestions" class="suggestions"></div>
-      <div class="filterbar">
-        <button class="filter-btn active" data-filter="all">SEMUA</button>
-        <button class="filter-btn" data-filter="grid">GRID</button>
-        <button class="filter-btn" data-filter="hero">HERO</button>
-        <button class="filter-btn" data-filter="logo">LOGO</button>
-        <button class="filter-btn" data-filter="icon">IKON</button>
-      </div>
+    <h2 style="text-align: center; margin-top: 0; font-size: 28px;">Selamat datang di Gridwall</h2>
+    <p style="text-align: center; color: var(--c-text-light); margin-bottom: 32px; font-size: 15px; line-height: 1.5;">
+      Temukan dan simpan cover art, logo, serta banner game kualitas tinggi dari SteamGridDB.
+    </p>
+    
+    <div class="form-group">
+      <label>SteamGridDB API Key</label>
+      <input type="text" id="ob-api-key" placeholder="Tempel API key Anda di sini..." autocomplete="off">
     </div>
-  </header>
-
-  <div class="status-line" id="statusLine"></div>
-  <div id="emptyState" class="empty-state hidden"></div>
-  <main id="masonry"></main>
-
-  <nav class="tabbar">
-    <button class="tab-btn active" data-tab="search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      CARI
-    </button>
-    <button class="tab-btn" data-tab="board">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v13"/><path d="m8 6 4-4 4 4"/><rect x="4" y="15" width="16" height="6" rx="1"/></svg>
-      PAPAN SAYA
-    </button>
-  </nav>
-</div>
-
-<div id="lightbox" class="overlay hidden">
-  <div class="lb-inner">
-    <button class="icon-btn lb-close" id="lbCloseBtn" aria-label="Tutup">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-    </button>
-    <div class="lb-imgwrap"><img id="lbImg" alt=""></div>
-    <div class="lb-meta" id="lbMeta"></div>
-    <div class="lb-actions">
-      <button class="btn-primary" id="lbPinBtn">Pin ke Papan</button>
-      <a class="btn-ghost" id="lbOpenLink" href="#" target="_blank" rel="noopener" style="text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center;">Buka Gambar</a>
-    </div>
-    <p class="lb-hint">Tekan lama gambar di atas buat simpan langsung ke galeri HP.</p>
+    
+    <button id="ob-btn-start" class="btn-primary" style="width: 100%; padding: 16px;">Masuk</button>
+    
+    <p style="font-size: 14px; color: var(--c-text-light); margin-top: 32px; text-align: center;">
+      Belum punya API key? <br>
+      <a href="https://www.steamgriddb.com/profile/preferences" target="_blank" style="color: var(--c-text); font-weight: 700; text-decoration: underline; margin-top: 8px; display: inline-block;">Dapatkan gratis di sini</a>
+    </p>
   </div>
 </div>
 
-<div id="settingsOverlay" class="overlay hidden">
-  <div class="sheet">
-    <div class="sheet-head">
-      <h2>Pengaturan</h2>
-      <button class="icon-btn" id="settingsCloseBtn" aria-label="Tutup">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
+<!-- Main App -->
+<div id="app" class="hidden">
+  
+  <header class="top-nav">
+    <div class="logo-wrapper hide-mobile">
+      <div class="logo-circle" title="Gridwall">G</div>
     </div>
-    <label class="field-label" for="stApiKey">SteamGridDB API Key</label>
-    <input id="stApiKey" class="field-input" type="text" autocomplete="off" spellcheck="false">
-    <p class="field-hint">Dibuat &amp; dikelola di <a href="https://www.steamgriddb.com/profile/preferences" target="_blank" rel="noopener">steamgriddb.com/profile/preferences</a>.</p>
+    <div class="desktop-nav hide-mobile">
+      <button class="nav-btn active" data-tab="home">Beranda</button>
+      <button class="nav-btn" data-tab="saved">Disimpan</button>
+    </div>
+    
+    <div class="search-container">
+      <div class="search-box">
+        <span class="search-icon">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M10 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6m13.12 2.88l-4.26-4.26A9.842 9.842 0 0 0 20 10c0-5.52-4.48-10-10-10S0 4.48 0 10s4.48 10 10 10c1.67 0 3.24-.41 4.62-1.14l4.26 4.26a3 3 0 0 0 4.24 0 2.99 2.99 0 0 0 0-4.24"></path></svg>
+        </span>
+        <input type="text" id="search-input" placeholder="Cari judul game (misal: Elden Ring)..." autocomplete="off" spellcheck="false">
+      </div>
+      <div class="search-dropdown hidden" id="search-dropdown"></div>
+    </div>
+    
+    <button class="icon-btn hide-mobile" id="btn-settings-desktop" title="Pengaturan">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 20a8 8 0 1 1 0-16 8 8 0 0 1 0 16m0-18A10 10 0 1 0 12 22 10 10 0 0 0 12 2m0 14a4 4 0 1 1 0-8 4 4 0 0 1 0 8m0-6a2 2 0 1 0 0 4 2 2 0 0 0 0-4"></path></svg>
+    </button>
+  </header>
 
-    <label class="field-label" for="stProxy">Prefix Proxy CORS (opsional)</label>
-    <input id="stProxy" class="field-input" type="text" placeholder="kosongkan kalau tidak perlu" autocomplete="off" spellcheck="false">
-    <p class="field-hint">Dipakai cuma kalau permintaan langsung ke SteamGridDB diblokir CORS oleh browser. Permintaan (termasuk API key) bakal lewat alamat ini — pakai proxy yang kamu percaya saja.</p>
+  <!-- Mobile Nav -->
+  <nav class="bottom-nav hide-desktop">
+    <button class="mobile-nav-btn active" data-tab="home" title="Beranda">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M12 2.25L.75 12h3v10.5h6v-6h4.5v6h6V12h3L12 2.25z"/></svg>
+    </button>
+    <button class="mobile-nav-btn" data-tab="saved" title="Disimpan">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+    </button>
+    <button class="mobile-nav-btn" id="btn-settings-mobile" title="Pengaturan">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+    </button>
+  </nav>
 
-    <button class="btn-primary" id="stSaveBtn">Simpan Perubahan</button>
-    <button class="btn-ghost" id="stClearBoardBtn">Kosongkan Papan Saya</button>
-    <button class="btn-ghost" id="stForgetKeyBtn">Lupakan API Key</button>
+  <div class="categories-container" id="filter-bar">
+    <button class="pill active" data-filter="all">Semua</button>
+    <button class="pill" data-filter="grid">Cover</button>
+    <button class="pill" data-filter="hero">Banner</button>
+    <button class="pill" data-filter="logo">Logo</button>
+    <button class="pill" data-filter="icon">Ikon</button>
+  </div>
+
+  <main class="masonry-wrapper">
+    <div id="loading" class="hidden">
+      <svg width="40" height="40" viewBox="0 0 50 50" class="spinner"><circle cx="25" cy="25" r="20" fill="none" stroke="var(--c-red)" stroke-width="4" stroke-dasharray="80" stroke-dashoffset="60" stroke-linecap="round"></circle></svg>
+    </div>
+    
+    <div id="empty-state" class="empty-state hidden"></div>
+    <div class="masonry" id="grid"></div>
+  </main>
+</div>
+
+<!-- Lightbox Modal -->
+<div id="lightbox" class="modal-overlay hidden">
+  <div class="modal-box large">
+    <button class="btn-close-lightbox" id="btn-close-lightbox">✖</button>
+    <div class="lightbox-grid">
+      <div class="lightbox-img-wrapper">
+        <img id="lb-img" src="" alt="">
+      </div>
+      <div class="lightbox-details">
+        <div class="lb-header">
+          <h2>Info Visual</h2>
+          <button id="lb-save-btn" class="btn-primary">Simpan</button>
+        </div>
+        
+        <div style="margin-top: 16px; margin-bottom: 24px;">
+          <p class="lb-meta"><strong>Tipe</strong> <span id="lb-meta-type">Cover</span></p>
+          <p class="lb-meta"><strong>Resolusi</strong> <span id="lb-meta-res">600x900</span></p>
+          <p class="lb-meta"><strong>Kontributor</strong> <span id="lb-meta-author">Anonim</span></p>
+        </div>
+        
+        <a id="lb-link" href="#" target="_blank" class="btn-secondary" style="margin-top: auto;">Buka Gambar Asli</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h2 style="margin-top: 0; text-align: center; font-size: 24px; margin-bottom: 24px;">Pengaturan</h2>
+    
+    <div class="form-group">
+      <label>SteamGridDB API Key</label>
+      <input type="text" id="setting-api-key" autocomplete="off">
+    </div>
+    
+    <div class="form-group">
+      <label>Proxy Relay (CORS Bypass)</label>
+      <input type="text" id="setting-proxy" placeholder="https://corsproxy.io/?">
+      <small>Proxy bawaan memakai format aman: <b>https://corsproxy.io/?url=...</b><br>
+      Kosongkan untuk memakai proxy bawaan. Untuk domain production, CorsProxy dapat memerlukan konfigurasi domain/API key.</small>
+    </div>
+    
+    <div style="display: flex; gap: 12px; margin-top: 32px; align-items: center;">
+      <button class="btn-secondary" id="btn-logout" style="background: #ffebe8; color: var(--c-red);">Hapus Kunci</button>
+      <div style="flex:1"></div>
+      <button class="btn-secondary" id="btn-close-settings" style="background: transparent;">Batal</button>
+      <button class="btn-primary" id="btn-save-settings">Simpan</button>
+    </div>
   </div>
 </div>
 
 <script>
-(function(){
+(function() {
   "use strict";
 
-  const API_BASE = "https://www.steamgriddb.com/api/v2";
-  const K = { key:"gridwall:apikey", proxy:"gridwall:proxy", pins:"gridwall:pins" };
   const TYPES = {
-    grid: { label:"GRID", path:"grids" },
-    hero: { label:"HERO", path:"heroes" },
-    logo: { label:"LOGO", path:"logos" },
-    icon: { label:"IKON", path:"icons" }
+    grid: { label: 'Cover', path: 'grids' },
+    hero: { label: 'Banner', path: 'heroes' },
+    logo: { label: 'Logo', path: 'logos' },
+    icon: { label: 'Ikon', path: 'icons' }
   };
 
-  const state = {
-    apiKey:"", proxyPrefix:"", pins:[],
-    view:"search", filter:"all",
-    currentGame:null, results:[], loading:false,
-    activePin:null
+  const Store = {
+    get(key) { try { return localStorage.getItem(key); } catch(e) { return null; } },
+    set(key, val) { try { localStorage.setItem(key, val); } catch(e) {} }
   };
 
-  const $ = (sel) => document.querySelector(sel);
-  const el = {
-    onboarding: $("#onboarding"), obApiKey: $("#obApiKey"), obProxy: $("#obProxy"), obSaveBtn: $("#obSaveBtn"),
-    app: $("#app"), searchSection: $("#searchSection"),
-    searchInput: $("#searchInput"), clearSearch: $("#clearSearch"), suggestions: $("#suggestions"),
-    filterBtns: Array.from(document.querySelectorAll(".filter-btn")),
-    statusLine: $("#statusLine"), emptyState: $("#emptyState"), masonry: $("#masonry"),
-    tabBtns: Array.from(document.querySelectorAll(".tab-btn")),
-    settingsBtn: $("#settingsBtn"), settingsOverlay: $("#settingsOverlay"), settingsCloseBtn: $("#settingsCloseBtn"),
-    stApiKey: $("#stApiKey"), stProxy: $("#stProxy"), stSaveBtn: $("#stSaveBtn"),
-    stClearBoardBtn: $("#stClearBoardBtn"), stForgetKeyBtn: $("#stForgetKeyBtn"),
-    lightbox: $("#lightbox"), lbCloseBtn: $("#lbCloseBtn"), lbImg: $("#lbImg"), lbMeta: $("#lbMeta"),
-    lbPinBtn: $("#lbPinBtn"), lbOpenLink: $("#lbOpenLink")
-  };
+  const App = {
+    state: {
+      apiKey: '',
+      proxy: '',
+      view: 'home',
+      currentGame: null,
+      artworks: [],
+      saved: [],
+      filter: 'all'
+    },
+    itemMap: new Map(),
+    searchTimeout: null,
 
-  function toast(msg){
-    const t = document.createElement("div");
-    t.className = "toast"; t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 3200);
-  }
+    init() {
+      this.loadState();
+      this.bindEvents();
+      if (!this.state.apiKey) {
+        document.getElementById('onboarding').classList.remove('hidden');
+      } else {
+        this.showApp();
+      }
+    },
 
-  const memoryStore = {};
-  let storageWarned = false;
+    loadState() {
+      this.state.apiKey = Store.get('gridwall:apikey') || '';
+      this.state.proxy = Store.get('gridwall:proxy') || 'https://corsproxy.io/?';
+      const savedStr = Store.get('gridwall:saved');
+      if (savedStr) {
+        try {
+          this.state.saved = JSON.parse(savedStr);
+          this.state.saved.forEach(item => this.itemMap.set(this.getItemId(item), item));
+        } catch(e) { this.state.saved = []; }
+      }
+    },
 
-  function hasWindowStorage(){
-    return typeof window.storage === "object" && window.storage
-      && typeof window.storage.get === "function" && typeof window.storage.set === "function";
-  }
-  function hasLocalStorage(){
-    try{
-      const t = "__gridwall_test__";
-      localStorage.setItem(t, "1"); localStorage.removeItem(t);
+    showApp() {
+      document.getElementById('onboarding').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      this.renderGrid();
+    },
+
+    showToast(msg) {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.animation = 'slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) reverse forwards';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    },
+
+    /* ---------- API Fetch Logic ---------- */
+    getApiErrorMessage(status, body = '') {
+      if (status === 401) return 'API Key ditolak SteamGridDB (401). Pastikan key masih aktif dan ditempel lengkap.';
+      if (status === 403) return 'Akses ditolak (403). SteamGridDB atau proxy menolak permintaan.';
+      if (status === 404) return 'Endpoint SteamGridDB tidak ditemukan (404).';
+      if (status === 429) return 'Terlalu banyak permintaan (429). Coba lagi beberapa saat.';
+      if (status >= 500) return `SteamGridDB sedang bermasalah (${status}).`;
+      if (body) {
+        try {
+          const json = JSON.parse(body);
+          if (Array.isArray(json.errors) && json.errors.length) return json.errors.join(', ');
+          if (json.error?.message) return json.error.message;
+          if (json.message) return json.message;
+        } catch (_) {}
+      }
+      return `Permintaan API gagal (HTTP ${status}).`;
+    },
+
+    buildProxyUrl(targetUrl, proxyValue) {
+      const proxy = (proxyValue || '').trim();
+      if (!proxy) return targetUrl;
+
+      // Current CorsProxy format: https://corsproxy.io/?url=<encoded URL>
+      if (/corsproxy\.io/i.test(proxy)) {
+        return `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
+      }
+
+      if (/[?&]url=$/i.test(proxy)) {
+        return `${proxy}${encodeURIComponent(targetUrl)}`;
+      }
+
+      // Backward compatibility for ThingProxy-style paths.
+      if (/thingproxy\.freeboard\.io\/fetch\/?$/i.test(proxy)) {
+        return proxy + targetUrl;
+      }
+
+      const separator = proxy.includes('?')
+        ? (proxy.endsWith('?') || proxy.endsWith('&') ? '' : '&')
+        : '?';
+      return `${proxy}${separator}url=${encodeURIComponent(targetUrl)}`;
+    },
+
+    async requestApi(targetUrl, useProxy = false) {
+      const fetchUrl = useProxy
+        ? this.buildProxyUrl(targetUrl, this.state.proxy)
+        : targetUrl;
+
+      const res = await fetch(fetchUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.state.apiKey}`,
+          'Accept': 'application/json'
+        },
+        cache: 'no-store'
+      });
+
+      const body = await res.text();
+
+      if (!res.ok) {
+        const error = new Error(this.getApiErrorMessage(res.status, body));
+        error.status = res.status;
+        error.body = body;
+        error.url = fetchUrl;
+        throw error;
+      }
+
+      try {
+        return JSON.parse(body);
+      } catch (_) {
+        const error = new Error('SteamGridDB mengembalikan respons yang bukan JSON.');
+        error.status = res.status;
+        error.body = body;
+        error.url = fetchUrl;
+        throw error;
+      }
+    },
+
+    async fetchAPI(path) {
+      const targetUrl = `https://www.steamgriddb.com/api/v2${path}`;
+
+      // Direct first; transparently use CORS proxy only for browser/network failures.
+      try {
+        return await this.requestApi(targetUrl, false);
+      } catch (directError) {
+        const networkFailure =
+          !directError.status ||
+          directError.name === 'TypeError' ||
+          /Failed to fetch|NetworkError|Load failed/i.test(directError.message || '');
+
+        if (!this.state.proxy || !networkFailure) {
+          console.error('SteamGridDB direct request failed:', directError);
+          throw directError;
+        }
+      }
+
+      try {
+        return await this.requestApi(targetUrl, true);
+      } catch (proxyError) {
+        console.error('SteamGridDB proxy request failed:', proxyError);
+        throw proxyError;
+      }
+    },
+
+    async testApiKey() {
+      await this.fetchAPI(`/search/autocomplete/${encodeURIComponent('portal')}`);
       return true;
-    }catch(e){ return false; }
-  }
-  // "bridge" = jalan di dalam Claude (window.storage), "local" = browser biasa/standalone, "memory" = fallback terakhir
-  const STORAGE_MODE = hasWindowStorage() ? "bridge" : (hasLocalStorage() ? "local" : "memory");
+    },
 
-  async function storeGet(key){
-    if (STORAGE_MODE === "bridge"){
-      try{ const r = await window.storage.get(key, false); return r ? r.value : null; }
-      catch(e){ return null; }
-    }
-    if (STORAGE_MODE === "local"){
-      try{ return localStorage.getItem(key); }catch(e){ return null; }
-    }
-    return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null;
-  }
-  async function storeSet(key, value){
-    if (STORAGE_MODE === "bridge"){
-      try{ await window.storage.set(key, value, false); return true; }
-      catch(e){ /* jatuh ke memori di bawah */ }
-    } else if (STORAGE_MODE === "local"){
-      try{ localStorage.setItem(key, value); return true; }
-      catch(e){ /* jatuh ke memori di bawah */ }
-    }
-    memoryStore[key] = value;
-    if (!storageWarned){
-      storageWarned = true;
-      toast("Penyimpanan browser nggak kebaca — data cuma bertahan selama tab ini kebuka.");
-    }
-    return false;
-  }
-
-  async function loadState(){
-    state.apiKey = (await storeGet(K.key)) || "";
-    state.proxyPrefix = (await storeGet(K.proxy)) || "";
-    const rawPins = await storeGet(K.pins);
-    try{ state.pins = rawPins ? JSON.parse(rawPins) : []; }catch(e){ state.pins = []; }
-  }
-  async function savePins(){ await storeSet(K.pins, JSON.stringify(state.pins)); }
-
-  function pinKey(item){ return item.type + ":" + item.id; }
-  function isPinned(item){ return state.pins.some(p => pinKey(p) === pinKey(item)); }
-
-  async function togglePin(item){
-    if (isPinned(item)){
-      state.pins = state.pins.filter(p => pinKey(p) !== pinKey(item));
-    } else {
-      state.pins.unshift(Object.assign({}, item, { addedAt: Date.now() }));
-    }
-    await savePins();
-    updateLightboxPinState(item);
-    if (state.view === "board") renderBoard();
-    else renderMasonryCards(state.results);
-  }
-
-  /* ---------- API ---------- */
-  async function sgdbFetch(path){
-    const target = API_BASE + path;
-    const headers = { "Authorization": "Bearer " + state.apiKey, "Accept": "application/json" };
-    try{
-      const res = await fetch(target, { headers });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return await res.json();
-    }catch(directErr){
-      if (!state.proxyPrefix) throw directErr;
-      const proxied = state.proxyPrefix + encodeURIComponent(target);
-      const res2 = await fetch(proxied, { headers });
-      if (!res2.ok) throw new Error("HTTP " + res2.status + " (proxy)");
-      return await res2.json();
-    }
-  }
-  function unwrap(json){
-    if (Array.isArray(json)) return json;
-    if (json && Array.isArray(json.data)) return json.data;
-    return [];
-  }
-
-  async function searchGames(term){
-    const json = await sgdbFetch("/search/autocomplete/" + encodeURIComponent(term));
-    return unwrap(json);
-  }
-  async function fetchArtByType(gameId, typeKey){
-    const def = TYPES[typeKey];
-    const json = await sgdbFetch("/" + def.path + "/game/" + gameId);
-    return unwrap(json).map(it => ({
-      id: it.id, type: typeKey, url: it.url, thumb: it.thumb || it.url,
-      style: it.style || "", width: it.width, height: it.height,
-      author: it.author && it.author.name ? it.author.name : ""
-    }));
-  }
-  async function fetchArtForGame(gameId, filter){
-    const keys = filter === "all" ? Object.keys(TYPES) : [filter];
-    const chunks = await Promise.allSettled(keys.map(k => fetchArtByType(gameId, k)));
-    let out = [], anyOk = false, lastErr = null;
-    chunks.forEach(c => {
-      if (c.status === "fulfilled"){ anyOk = true; out = out.concat(c.value); }
-      else { lastErr = c.reason; }
-    });
-    if (!anyOk && lastErr) throw lastErr;
-    return out;
-  }
-
-  /* ---------- rendering: search ---------- */
-  function setStatus(text, showRetry){
-    el.statusLine.innerHTML = "";
-    const span = document.createElement("span");
-    span.textContent = text;
-    el.statusLine.appendChild(span);
-    if (showRetry){
-      const btn = document.createElement("button");
-      btn.className = "retry"; btn.textContent = "Coba lagi";
-      btn.onclick = () => state.currentGame && selectGame(state.currentGame);
-      el.statusLine.appendChild(btn);
-    }
-  }
-
-  function renderSuggestions(games){
-    el.suggestions.innerHTML = "";
-    if (!games.length) return;
-    games.slice(0, 12).forEach(g => {
-      const chip = document.createElement("button");
-      chip.className = "suggestion-chip";
-      chip.innerHTML = g.name + (g.verified ? "" : " <small>?</small>");
-      chip.onclick = () => selectGame(g);
-      el.suggestions.appendChild(chip);
-    });
-  }
-
-  function cardTag(item){
-    let dims = (item.width && item.height) ? (item.width + "×" + item.height) : "";
-    return TYPES[item.type].label + (item.style ? " · " + item.style : "") + (dims ? '<span class="dim">' + dims + "</span>" : "");
-  }
-
-  function renderMasonryCards(items){
-    el.masonry.innerHTML = "";
-    el.emptyState.classList.toggle("hidden", items.length > 0);
-    if (!items.length) return;
-    const frag = document.createDocumentFragment();
-    items.forEach(item => {
-      const card = document.createElement("div");
-      card.className = "card";
-      const img = document.createElement("img");
-      img.src = item.thumb; img.loading = "lazy"; img.alt = "";
-      const tag = document.createElement("div");
-      tag.className = "tag"; tag.innerHTML = cardTag(item);
-      card.appendChild(img); card.appendChild(tag);
-      if (isPinned(item)){
-        const badge = document.createElement("div");
-        badge.className = "pinned-badge"; card.appendChild(badge);
+    formatApiError(error) {
+      if (!error) return 'API tidak dapat dihubungi.';
+      if (error.status === 401) return 'API Key tidak valid atau sudah tidak aktif (401).';
+      if (error.status === 403) return 'Akses ditolak (403). Periksa API Key atau proxy.';
+      if (error.status === 429) return 'Terlalu banyak permintaan. Coba lagi nanti.';
+      if (!error.status || /Failed to fetch|NetworkError|Load failed/i.test(error.message || '')) {
+        return 'Koneksi ke SteamGridDB diblokir browser. Proxy CORS tidak berhasil.';
       }
-      card.onclick = () => openLightbox(item);
-      frag.appendChild(card);
-    });
-    el.masonry.appendChild(frag);
-  }
+      return error.message || 'Gagal menghubungi SteamGridDB.';
+    },
 
-  async function selectGame(game){
-    state.currentGame = game;
-    state.view = "search";
-    el.suggestions.innerHTML = "";
-    state.loading = true;
-    setStatus("Memuat art untuk “" + game.name + "”...");
-    el.emptyState.classList.add("hidden");
-    el.masonry.innerHTML = "";
-    try{
-      const items = await fetchArtForGame(game.id, state.filter);
-      state.results = items;
-      state.loading = false;
-      if (!items.length){
-        setStatus("0 art ditemukan untuk “" + game.name + "”.");
-        el.emptyState.classList.remove("hidden");
-        el.emptyState.innerHTML = "<strong>Kosong</strong>Belum ada art " + (state.filter === "all" ? "" : TYPES[state.filter].label + " ") + "buat game ini di SteamGridDB.";
+    async handleSearchInput(e) {
+      const term = e.target.value.trim();
+      const dropdown = document.getElementById('search-dropdown');
+
+      clearTimeout(this.searchTimeout);
+      if (term.length < 2) {
+        dropdown.classList.add('hidden');
+        return;
+      }
+
+      this.searchTimeout = setTimeout(async () => {
+        try {
+          const res = await this.fetchAPI(`/search/autocomplete/${encodeURIComponent(term)}`);
+          this.renderSuggestions(res.data || []);
+        } catch (err) {
+          console.error('Search error:', err);
+          dropdown.innerHTML = `<div class="suggestion-item text-muted">${this.formatApiError(err)}</div>`;
+          dropdown.classList.remove('hidden');
+        }
+      }, 500);
+    },
+
+    renderSuggestions(games) {
+      const dropdown = document.getElementById('search-dropdown');
+      if (games.length === 0) {
+        dropdown.innerHTML = `<div class="suggestion-item text-muted">Game tidak ditemukan</div>`;
       } else {
-        setStatus(items.length + " art ditemukan untuk “" + game.name + "”.");
+        dropdown.innerHTML = games.map(g => `
+          <div class="suggestion-item" onclick="App.selectGame(${g.id}, '${g.name.replace(/'/g, "\\'")}')">
+            ${g.name}
+          </div>
+        `).join('');
       }
-      renderMasonryCards(items);
-    }catch(err){
-      state.loading = false;
-      setStatus("Gagal memuat: " + err.message + ". Cek API key, atau aktifkan relay proxy di Pengaturan kalau ini masalah CORS.", true);
-      el.emptyState.classList.add("hidden");
-    }
-  }
+      dropdown.classList.remove('hidden');
+    },
 
-  let searchDebounce = null;
-  el.searchInput.addEventListener("input", () => {
-    const term = el.searchInput.value.trim();
-    el.clearSearch.classList.toggle("hidden", term.length === 0);
-    clearTimeout(searchDebounce);
-    if (term.length < 2){ el.suggestions.innerHTML = ""; return; }
-    searchDebounce = setTimeout(async () => {
-      try{
-        const games = await searchGames(term);
-        renderSuggestions(games);
-      }catch(err){
-        el.suggestions.innerHTML = "";
-        setStatus("Pencarian gagal: " + err.message, true);
+    async selectGame(id, name) {
+      document.getElementById('search-dropdown').classList.add('hidden');
+      document.getElementById('search-input').value = name;
+
+      this.state.currentGame = { id, name };
+      this.state.view = 'home';
+      this.state.filter = 'all';
+      this.updateNavUI();
+      this.updateFilterUI();
+
+      this.showLoading(true);
+
+      try {
+        const entries = await Promise.all(
+          Object.keys(TYPES).map(async k => {
+            const res = await this.fetchAPI(`/${TYPES[k].path}/game/${id}`);
+            return (res.data || []).map(item => ({ ...item, _type: k }));
+          })
+        );
+
+        this.state.artworks = entries.flat().sort((a,b) => (b.upvotes||0) - (a.upvotes||0));
+        this.showLoading(false);
+        this.renderGrid();
+
+        if (this.state.artworks.length === 0) {
+          this.showToast('Game ditemukan, tetapi belum ada artwork untuk filter ini.');
+        }
+      } catch (e) {
+        this.showLoading(false);
+        this.state.artworks = [];
+        this.renderGrid();
+        this.showToast(this.formatApiError(e));
       }
-    }, 400);
-  });
-  el.clearSearch.addEventListener("click", () => {
-    el.searchInput.value = ""; el.clearSearch.classList.add("hidden"); el.suggestions.innerHTML = "";
-    el.searchInput.focus();
-  });
+    },
 
-  el.filterBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      el.filterBtns.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      state.filter = btn.dataset.filter;
-      if (state.currentGame) selectGame(state.currentGame);
-    });
-  });
 
-  /* ---------- board (pinned) ---------- */
-  function renderBoard(){
-    setStatus(state.pins.length + " item di Papan Saya.");
-    if (!state.pins.length){
-      el.emptyState.classList.remove("hidden");
-      el.emptyState.innerHTML = "<strong>Papan masih kosong</strong>Tekan sebuah art lalu pilih “Pin ke Papan” buat nyimpennya di sini.";
-      el.masonry.innerHTML = "";
-    } else {
-      renderMasonryCards(state.pins);
-    }
-  }
+    /* ---------- UI Rendering ---------- */
+    getItemId(item) { return `${item._type}_${item.id}`; },
+    
+    isItemSaved(id) { return this.state.saved.some(i => this.getItemId(i) === id); },
 
-  el.tabBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      el.tabBtns.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      state.view = btn.dataset.tab;
-      el.searchSection.classList.toggle("hidden", state.view === "board");
-      if (state.view === "board"){
-        renderBoard();
-      } else if (state.currentGame){
-        setStatus(state.results.length + " art ditemukan untuk “" + state.currentGame.name + "”.");
-        renderMasonryCards(state.results);
+    renderCard(item) {
+      const id = this.getItemId(item);
+      this.itemMap.set(id, item);
+      const isSaved = this.isItemSaved(id);
+      const btnText = isSaved ? 'Tersimpan' : 'Simpan';
+      const btnBg = isSaved ? '#111' : 'var(--c-red)';
+      const typeLabel = TYPES[item._type]?.label || item._type;
+      const dims = item.width && item.height ? `${item.width}x${item.height}` : '';
+      
+      return `
+        <div class="card" onclick="App.openLightbox('${id}')">
+          <img src="${item.thumb || item.url}" alt="" loading="lazy">
+          <div class="overlay">
+            <button class="btn-save" data-item-id="${id}" style="background: ${btnBg};" 
+                    onclick="event.stopPropagation(); App.toggleSave('${id}')">
+              ${btnText}
+            </button>
+            <div class="card-info">
+              ${dims ? `<span>${dims}</span>` : ''}
+              <span>${typeLabel}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    },
+
+    renderGrid() {
+      const grid = document.getElementById('grid');
+      const empty = document.getElementById('empty-state');
+      
+      let items = this.state.view === 'saved' ? this.state.saved : this.state.artworks;
+      
+      if (this.state.filter !== 'all') {
+        items = items.filter(i => i._type === this.state.filter);
+      }
+      
+      if (items.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        if (this.state.view === 'saved') {
+          empty.innerHTML = `<h2>Belum ada inspirasi</h2><p>Mulai cari game dan klik 'Simpan' pada gambar yang Anda suka.</p>`;
+        } else if (!this.state.currentGame) {
+          empty.innerHTML = `<h2>Mulai pencarian</h2><p>Gunakan bilah pencarian di atas untuk mencari aset game.</p>`;
+        } else {
+          empty.innerHTML = `<h2>Kosong</h2><p>Tidak ada visual yang cocok dengan filter ini untuk game yang dipilih.</p>`;
+        }
       } else {
-        setStatus("Cari judul game buat mulai.");
-        el.emptyState.classList.remove("hidden");
-        el.emptyState.innerHTML = "<strong>Mulai dari sini</strong>Ketik judul game di kolom pencarian, pilih dari saran, terus jelajahin art-nya.";
-        el.masonry.innerHTML = "";
+        empty.classList.add('hidden');
+        grid.innerHTML = items.map(item => this.renderCard(item)).join('');
       }
-    });
-  });
+    },
 
-  /* ---------- lightbox ---------- */
-  function updateLightboxPinState(item){
-    if (!state.activePin || pinKey(state.activePin) !== pinKey(item)) return;
-    el.lbPinBtn.textContent = isPinned(item) ? "Lepas dari Papan" : "Pin ke Papan";
-  }
-  function openLightbox(item){
-    state.activePin = item;
-    el.lbImg.src = item.url || item.thumb;
-    el.lbOpenLink.href = item.url || item.thumb;
-    el.lbMeta.innerHTML = [
-      ["Tipe", TYPES[item.type].label],
-      ["Style", item.style || "—"],
-      ["Dimensi", (item.width && item.height) ? (item.width + " × " + item.height) : "—"],
-      ["Kontributor", item.author || "—"]
-    ].map(([k,v]) => '<div class="row"><span>' + k + '</span><span>' + v + '</span></div>').join("");
-    el.lbPinBtn.textContent = isPinned(item) ? "Lepas dari Papan" : "Pin ke Papan";
-    el.lbPinBtn.onclick = () => togglePin(item);
-    el.lightbox.classList.remove("hidden");
-  }
-  el.lbCloseBtn.addEventListener("click", () => el.lightbox.classList.add("hidden"));
-  el.lightbox.addEventListener("click", (e) => { if (e.target === el.lightbox) el.lightbox.classList.add("hidden"); });
+    toggleSave(id) {
+      const item = this.itemMap.get(id);
+      if(!item) return;
+      const isSaved = this.isItemSaved(id);
+      
+      if (isSaved) {
+        this.state.saved = this.state.saved.filter(i => this.getItemId(i) !== id);
+        this.showToast("Dihapus dari Disimpan");
+      } else {
+        this.state.saved.push(item);
+        this.showToast("Disimpan ke profil Anda");
+      }
+      Store.set('gridwall:saved', JSON.stringify(this.state.saved));
+      
+      document.querySelectorAll(`.btn-save[data-item-id="${id}"]`).forEach(btn => {
+        if (!isSaved) {
+          btn.textContent = "Tersimpan"; btn.style.background = "#111";
+        } else {
+          btn.textContent = "Simpan"; btn.style.background = "var(--c-red)";
+        }
+      });
 
-  /* ---------- settings ---------- */
-  function openSettings(){
-    el.stApiKey.value = state.apiKey;
-    el.stProxy.value = state.proxyPrefix;
-    el.settingsOverlay.classList.remove("hidden");
-  }
-  el.settingsBtn.addEventListener("click", openSettings);
-  el.settingsCloseBtn.addEventListener("click", () => el.settingsOverlay.classList.add("hidden"));
-  el.settingsOverlay.addEventListener("click", (e) => { if (e.target === el.settingsOverlay) el.settingsOverlay.classList.add("hidden"); });
+      const lbSaveBtn = document.getElementById('lb-save-btn');
+      if (lbSaveBtn.dataset.itemId === id) {
+        if (!isSaved) {
+           lbSaveBtn.textContent = "Tersimpan"; lbSaveBtn.style.background = "#111";
+        } else {
+           lbSaveBtn.textContent = "Simpan"; lbSaveBtn.style.background = "var(--c-red)";
+        }
+      }
 
-  el.stSaveBtn.addEventListener("click", async () => {
-    const key = el.stApiKey.value.trim();
-    const proxy = el.stProxy.value.trim();
-    if (!key){ toast("API key nggak boleh kosong."); return; }
-    state.apiKey = key; state.proxyPrefix = proxy;
-    await storeSet(K.key, key);
-    await storeSet(K.proxy, proxy);
-    el.settingsOverlay.classList.add("hidden");
-    toast("Pengaturan disimpan.");
-    if (state.currentGame && state.view === "search") selectGame(state.currentGame);
-  });
+      if (this.state.view === 'saved') this.renderGrid();
+    },
 
-  el.stClearBoardBtn.addEventListener("click", async () => {
-    if (!confirm("Kosongkan semua pin di Papan Saya?")) return;
-    state.pins = []; await savePins();
-    if (state.view === "board") renderBoard();
-    toast("Papan dikosongkan.");
-  });
+    openLightbox(id) {
+      const item = this.itemMap.get(id);
+      if(!item) return;
+      const lb = document.getElementById('lightbox');
+      const isSaved = this.isItemSaved(id);
+      
+      document.getElementById('lb-img').src = item.url || item.thumb;
+      document.getElementById('lb-meta-type').textContent = TYPES[item._type]?.label || item._type;
+      document.getElementById('lb-meta-res').textContent = (item.width && item.height) ? `${item.width}x${item.height}` : '-';
+      document.getElementById('lb-meta-author').textContent = item.author?.name || 'Anonim';
+      
+      document.getElementById('lb-link').href = item.url;
+      
+      const saveBtn = document.getElementById('lb-save-btn');
+      saveBtn.dataset.itemId = id;
+      if (isSaved) {
+        saveBtn.textContent = "Tersimpan"; saveBtn.style.background = "#111";
+      } else {
+        saveBtn.textContent = "Simpan"; saveBtn.style.background = "var(--c-red)";
+      }
+      
+      lb.classList.remove('hidden');
+    },
 
-  el.stForgetKeyBtn.addEventListener("click", async () => {
-    if (!confirm("Lupakan API key yang tersimpan? Kamu perlu masukin lagi buat pakai app ini.")) return;
-    state.apiKey = ""; await storeSet(K.key, "");
-    el.settingsOverlay.classList.add("hidden");
-    el.app.classList.add("hidden");
-    el.onboarding.classList.remove("hidden");
-    el.obApiKey.value = ""; el.obProxy.value = state.proxyPrefix;
-  });
+    showLoading(show) {
+      const spinner = document.getElementById('loading');
+      const grid = document.getElementById('grid');
+      const empty = document.getElementById('empty-state');
+      
+      if (show) {
+        spinner.classList.remove('hidden');
+        grid.innerHTML = ''; empty.classList.add('hidden');
+      } else {
+        spinner.classList.add('hidden');
+      }
+    },
 
-  /* ---------- onboarding ---------- */
-  el.obSaveBtn.addEventListener("click", async () => {
-    const key = el.obApiKey.value.trim();
-    if (!key){ toast("Tempel API key dulu ya."); return; }
-    state.apiKey = key; state.proxyPrefix = el.obProxy.value.trim();
-    await storeSet(K.key, key);
-    await storeSet(K.proxy, state.proxyPrefix);
-    boot();
-  });
+    updateNavUI() {
+      document.querySelectorAll('[data-tab]').forEach(btn => {
+        if (btn.dataset.tab === this.state.view) btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
+    },
 
-  /* ---------- boot ---------- */
-  async function boot(){
-    await loadState();
-    if (!state.apiKey){
-      el.app.classList.add("hidden");
-      el.onboarding.classList.remove("hidden");
-      return;
+    updateFilterUI() {
+      document.querySelectorAll('[data-filter]').forEach(btn => {
+        if (btn.dataset.filter === this.state.filter) btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
+    },
+
+    /* ---------- Settings & Events ---------- */
+    bindEvents() {
+      // Nav Tabs
+      document.querySelectorAll('[data-tab]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          this.state.view = e.currentTarget.dataset.tab;
+          this.updateNavUI();
+          this.renderGrid();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      });
+      
+      // Filters
+      document.querySelectorAll('[data-filter]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          this.state.filter = e.currentTarget.dataset.filter;
+          this.updateFilterUI();
+          this.renderGrid();
+        });
+      });
+      
+      // Search
+      document.getElementById('search-input').addEventListener('input', (e) => this.handleSearchInput(e));
+      
+      // Settings Modal
+      const openSettings = () => {
+        document.getElementById('setting-api-key').value = this.state.apiKey;
+        document.getElementById('setting-proxy').value = this.state.proxy;
+        document.getElementById('settings-modal').classList.remove('hidden');
+      };
+      document.getElementById('btn-settings-desktop').addEventListener('click', openSettings);
+      document.getElementById('btn-settings-mobile').addEventListener('click', openSettings);
+      
+      document.getElementById('btn-close-settings').addEventListener('click', () => {
+        document.getElementById('settings-modal').classList.add('hidden');
+      });
+      
+      document.getElementById('btn-save-settings').addEventListener('click', async () => {
+        const key = document.getElementById('setting-api-key').value.trim();
+        const proxy = document.getElementById('setting-proxy').value.trim() || 'https://corsproxy.io/?';
+        if (!key) { this.showToast("API Key wajib diisi"); return; }
+
+        const previousKey = this.state.apiKey;
+        const previousProxy = this.state.proxy;
+        this.state.apiKey = key;
+        this.state.proxy = proxy;
+
+        try {
+          await this.testApiKey();
+          Store.set('gridwall:apikey', key);
+          Store.set('gridwall:proxy', proxy);
+          document.getElementById('settings-modal').classList.add('hidden');
+          this.showToast("API Key berhasil diverifikasi dan pengaturan disimpan");
+        } catch (err) {
+          this.state.apiKey = previousKey;
+          this.state.proxy = previousProxy;
+          this.showToast(this.formatApiError(err));
+        }
+      });
+
+      document.getElementById('btn-logout').addEventListener('click', () => {
+        if(confirm("Apakah Anda yakin ingin keluar dan menghapus API Key dari perangkat ini?")) {
+          Store.set('gridwall:apikey', '');
+          location.reload();
+        }
+      });
+      
+      // Onboarding
+      document.getElementById('ob-btn-start').addEventListener('click', async () => {
+        const btn = document.getElementById('ob-btn-start');
+        const key = document.getElementById('ob-api-key').value.trim();
+        if (!key) { this.showToast("Harap tempel API Key Anda"); return; }
+
+        const previousKey = this.state.apiKey;
+        const previousProxy = this.state.proxy;
+        this.state.apiKey = key;
+        this.state.proxy = 'https://corsproxy.io/?';
+
+        btn.disabled = true;
+        btn.textContent = 'Memeriksa API Key...';
+
+        try {
+          await this.testApiKey();
+          Store.set('gridwall:apikey', key);
+          Store.set('gridwall:proxy', this.state.proxy);
+          this.showApp();
+        } catch (err) {
+          this.state.apiKey = previousKey;
+          this.state.proxy = previousProxy;
+          this.showToast(this.formatApiError(err));
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Masuk';
+        }
+      });
+
+      // Lightbox actions
+      document.getElementById('btn-close-lightbox').addEventListener('click', () => {
+        document.getElementById('lightbox').classList.add('hidden');
+      });
+      document.getElementById('lb-save-btn').addEventListener('click', (e) => {
+        const id = e.currentTarget.dataset.itemId;
+        if (id) this.toggleSave(id);
+      });
+
+      // Close modals when clicking outside
+      window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal-overlay')) {
+          e.target.classList.add('hidden');
+        }
+        if (!e.target.closest('.search-container')) {
+          document.getElementById('search-dropdown').classList.add('hidden');
+        }
+      });
     }
-    el.onboarding.classList.add("hidden");
-    el.app.classList.remove("hidden");
-    setStatus("Cari judul game buat mulai.");
-    el.emptyState.classList.remove("hidden");
-    el.emptyState.innerHTML = "<strong>Mulai dari sini</strong>Ketik judul game di kolom pencarian, pilih dari saran, terus jelajahin art-nya.";
-  }
+  };
 
-  boot();
+  // Expose App globally for inline onclick handlers
+  window.App = App;
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    App.init();
+  });
 })();
 </script>
 </body>
